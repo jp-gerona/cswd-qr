@@ -14,9 +14,17 @@ final class QrBatchPdfGenerator
      */
     private const RENDER_MEMORY_LIMIT_BYTES = 512 * 1024 * 1024;
 
+    /**
+     * A full 50-page chunk takes well over the default 30s web execution cap to
+     * render in dompdf. set_time_limit() resets the timer; renderChunkPdf runs
+     * once per chunk, so each chunk is granted a fresh allowance.
+     */
+    private const RENDER_TIME_LIMIT_SECONDS = 300;
+
     public function renderChunkPdf(int $startNumber, int $quantityInChunk): string
     {
         $this->ensureRenderMemoryLimit();
+        set_time_limit(self::RENDER_TIME_LIMIT_SECONDS);
 
         $qrImageGenerator = new QrImageGenerator();
         $controlNumbers   = QrBatchPlanner::controlNumbers($quantityInChunk, $startNumber);
