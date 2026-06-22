@@ -11,8 +11,11 @@
 
     /*
      * A reliable 3x4 grid in dompdf uses a fixed table (its float layout drops
-     * rows). Each cell is 2.7in tall, so four rows total 10.8in and never spill
-     * onto an extra page; the cell content is sized to stay within that height.
+     * rows). dompdf does NOT stretch table rows to a taller table height, so the
+     * grid is capped at 10.8in (fits on one 11in sheet) and the CELL CONTENT is
+     * sized large enough that each of the four rows naturally fills ~2.7in — that
+     * is what removes the wasted space at the bottom. Keep cell content under
+     * ~2.7in tall or a row will push the grid past 10.8in and spill to page two.
      */
     .grid { display: table; table-layout: fixed; width: 100%; height: 10.8in; }
     .row  { display: table-row; }
@@ -20,7 +23,7 @@
         display: table-cell;
         width: 33.3333%;
         border: 1px dashed #adb5bd; /* gray cut guide */
-        padding: 0.1in 0.16in;
+        padding: 0.14in 0.16in;
         vertical-align: middle;
         text-align: center;
     }
@@ -30,12 +33,12 @@
         font-weight: 700;
         font-size: 9px;
         line-height: 1.15;
-        margin-bottom: 6px;
+        margin-bottom: 7px;
     }
 
     /* Barangay / Name: label sits left, the underline fills the remaining width
        so both lines end flush at the same right edge. */
-    .cell .field-row { display: table; width: 100%; margin: 3px 0; }
+    .cell .field-row { display: table; width: 100%; margin: 4px 0; }
     .cell .field-label {
         display: table-cell;
         width: 1px;            /* shrink-to-fit the label text */
@@ -50,10 +53,10 @@
         border-bottom: 1px solid #212529;
     }
 
-    .cell .qr { margin: 7px 0 5px 0; }
-    .cell .qr img { width: 1.4in; height: 1.4in; }
+    .cell .qr { margin: 8px 0 6px 0; }
+    .cell .qr img { width: 1.5in; height: 1.5in; }
 
-    .cell .control-label { font-size: 8px; color: #212529; margin-top: 2px; }
+    .cell .control-label { font-size: 8px; color: #212529; margin-top: 3px; }
     .cell .control-number {
         font-size: 15px;
         font-family: "Roboto Mono", monospace;
