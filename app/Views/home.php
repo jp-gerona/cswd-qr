@@ -12,14 +12,14 @@
     <div class="container py-5" style="max-width: 480px;">
         <div class="card shadow-sm">
             <div class="card-body">
-                <h1 class="h5 mb-3">CSWD QR Batch Generator</h1>
+                <h1 class="h5 mb-3">CSWD QR Code Generator</h1>
                 <div id="generateError" class="alert alert-danger d-none" role="alert"></div>
                 <form id="generateForm">
                     <div class="mb-3">
                         <label for="quantity" class="form-label">Quantity</label>
                         <input type="number" class="form-control" id="quantity" name="quantity"
                                min="1" max="10000" value="12" required>
-                        <div class="form-text">Up to 10,000. 12 cards per sheet.</div>
+                        <div class="form-text">Up to 10,000 QR codes. 12 QR codes per sheet.</div>
                     </div>
                     <button type="submit" class="btn btn-primary" id="generateButton">Generate</button>
                 </form>
@@ -37,7 +37,7 @@
             $button.prop('disabled', true).text('Generating…');
 
             $.ajax({
-                url: '<?= site_url('generate') ?>',
+                url: '<?= site_url("generate") ?>',
                 method: 'POST',
                 data: { quantity: $('#quantity').val() },
                 xhrFields: { responseType: 'blob' }

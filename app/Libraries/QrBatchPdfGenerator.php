@@ -29,8 +29,10 @@ final class QrBatchPdfGenerator
         $qrImageGenerator = new QrImageGenerator();
         $controlNumbers   = QrBatchPlanner::controlNumbers($quantityInChunk, $startNumber);
 
-        $pagesHtml = '';
+        $pagesHtml  = '';
+        $pageNumber = 0;
         foreach (array_chunk($controlNumbers, QrBatchPlanner::CELLS_PER_PAGE) as $pageControlNumbers) {
+            $pageNumber++;
             $cells = [];
             foreach ($pageControlNumbers as $controlNumber) {
                 $cells[] = [
@@ -38,7 +40,10 @@ final class QrBatchPdfGenerator
                     'qrDataUri'     => $qrImageGenerator->svgDataUri($controlNumber),
                 ];
             }
-            $pagesHtml .= view('pdf/batch_page', ['cells' => $cells]);
+            $pagesHtml .= view('pdf/batch_page', [
+                'cells'       => $cells,
+                'isFirstPage' => $pageNumber === 1,
+            ]);
             unset($cells); // release per-page QR data
         }
 
@@ -102,6 +107,11 @@ final class QrBatchPdfGenerator
         $fontMetrics->registerFont(
             ['family' => 'Roboto', 'style' => 'normal', 'weight' => 'bold'],
             APPPATH . 'Fonts/Roboto-Regular.ttf'
+        );
+        // Roboto Mono drives the control number (monospace) per the design.
+        $fontMetrics->registerFont(
+            ['family' => 'Roboto Mono', 'style' => 'normal', 'weight' => 'normal'],
+            APPPATH . 'Fonts/RobotoMono-Regular.ttf'
         );
     }
 
