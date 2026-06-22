@@ -26,6 +26,15 @@ final class QrBatchPdfGenerator
         $this->ensureRenderMemoryLimit();
         set_time_limit(self::RENDER_TIME_LIMIT_SECONDS);
 
+        // dompdf embeds PNGs via the GD extension. Fail fast with a clear,
+        // actionable message instead of dompdf's cryptic deep-stack exception.
+        if (! extension_loaded('gd')) {
+            throw new \RuntimeException(
+                'The PHP GD extension is required to embed PNG QR codes. '
+                . 'Install it (e.g. "sudo port install php82-gd") and restart the server.'
+            );
+        }
+
         $qrImageGenerator = new QrImageGenerator();
         $controlNumbers   = QrBatchPlanner::controlNumbers($quantityInChunk, $startNumber);
 
@@ -37,7 +46,7 @@ final class QrBatchPdfGenerator
             foreach ($pageControlNumbers as $controlNumber) {
                 $cells[] = [
                     'controlNumber' => $controlNumber,
-                    'qrDataUri'     => $qrImageGenerator->svgDataUri($controlNumber),
+                    'qrDataUri'     => $qrImageGenerator->dataUri($controlNumber),
                 ];
             }
             $pagesHtml .= view('pdf/batch_page', [
@@ -121,7 +130,7 @@ final class QrBatchPdfGenerator
      *
      * @return array{type: string, bytes: string, filename: string}
      */
-    public function generate(int $quantity): array
+    public function generate(int $startNumber, int $quantity): array
     {
         $codesPerChunk = QrBatchPlanner::PAGES_PER_CHUNK * QrBatchPlanner::CELLS_PER_PAGE;
         $chunkCount    = QrBatchPlanner::chunkCount($quantity);
@@ -129,9 +138,18 @@ final class QrBatchPdfGenerator
         if ($chunkCount === 1) {
             return [
                 'type'     => 'pdf',
-                'bytes'    => $this->renderChunkPdf(1, $quantity),
+                'bytes'    => $this->renderChunkPdf($startNumber, $quantity),
                 'filename' => 'cswd-qr-batch.pdf',
             ];
+        }
+
+        // Multi-chunk batches are bundled with ZipArchive (ext-zip). Fail fast
+        // with a clear message rather than a generic "class not found" 500.
+        if (! class_exists(\ZipArchive::class)) {
+            throw new \RuntimeException(
+                'The PHP zip extension (ZipArchive) is required for multi-file batches. '
+                . 'Install it (e.g. "sudo port install php82-zip") and restart the server.'
+            );
         }
 
         $zipFilePath = tempnam(sys_get_temp_dir(), 'cswd-qr-zip');
@@ -144,7 +162,7 @@ final class QrBatchPdfGenerator
             }
 
             $remainingQuantity = $quantity;
-            $nextStartNumber   = 1;
+            $nextStartNumber   = $startNumber;
             for ($chunkIndex = 1; $chunkIndex <= $chunkCount; $chunkIndex++) {
                 $quantityInChunk = min($codesPerChunk, $remainingQuantity);
                 $chunkPdfBytes   = $this->renderChunkPdf($nextStartNumber, $quantityInChunk);
