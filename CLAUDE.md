@@ -1,10 +1,11 @@
 # CSWD QR Batch Generator
 
-MVP. Batch QR code creator that renders QR codes into a printable PDF for the City Social Welfare and Development Office (CSWD).
+MVP. Batch QR code creator that renders QR codes into a printable PDF for the CITY OF BIÑAN.
 
 ## Stack (pinned)
 
 CI4 4.7.3 · PHP 8.2.30 · Composer 2.9.7 · MariaDB 10.4.28 · Apache 2.4.56 · XAMPP 8.2.4 (Mac Intel) · PHPUnit ^10.5.16
+Frontend (CDN): Bootstrap 5.3 · jQuery 3.6 (AJAX via jQuery). Backend libs: dompdf/dompdf · chillerlan/php-qrcode.
 
 Runs under XAMPP `htdocs`.
 

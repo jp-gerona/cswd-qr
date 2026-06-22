@@ -1,0 +1,4 @@
+# dompdf-generated font metric caches (regenerated on render)
+*.ufm
+*.ufm.json
+*.afm.json
