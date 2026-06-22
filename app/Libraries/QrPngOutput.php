@@ -3,9 +3,8 @@
 namespace App\Libraries;
 
 use chillerlan\QRCode\Output\QROutputAbstract;
-use chillerlan\QRCode\Data\QRMatrix;
 
-use function base64_encode, pack, sprintf, str_repeat, strlen;
+use function pack, str_repeat, strlen;
 
 /**
  * Pure-PHP PNG output for chillerlan/php-qrcode v6.
@@ -102,7 +101,7 @@ final class QrPngOutput extends QROutputAbstract
 
         // IHDR: width, height, bit depth (8), colour type (0 = grayscale),
         //        compression (0), filter (0), interlace (0).
-        $ihdrData  = pack('NNCCCcc', $imageSize, $imageSize, 8, 0, 0, 0, 0);
+        $ihdrData  = pack('NNCCCCC', $imageSize, $imageSize, 8, 0, 0, 0, 0);
         $ihdrChunk = $this->buildPngChunk('IHDR', $ihdrData);
 
         $idatChunk = $this->buildPngChunk('IDAT', $compressedImageData);
@@ -119,6 +118,6 @@ final class QrPngOutput extends QROutputAbstract
         $dataLength = strlen($chunkData);
         $crc32Value = crc32($chunkType . $chunkData);
 
-        return pack('N', $dataLength) . $chunkType . $chunkData . pack('N', $crc32Value);
+        return pack('N', $dataLength) . $chunkType . $chunkData . pack('N', $crc32Value & 0xFFFFFFFF);
     }
 }
