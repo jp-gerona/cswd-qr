@@ -49,6 +49,12 @@ final class QrBatchPdfGenerator
                     'qrDataUri'     => $qrImageGenerator->dataUri($controlNumber),
                 ];
             }
+            // Pad the final page with blank cells so every page is a full 3x4
+            // grid — otherwise a short last row stretches its columns/height and
+            // the cards lose their consistent size.
+            while (count($cells) < QrBatchPlanner::CELLS_PER_PAGE) {
+                $cells[] = ['controlNumber' => '', 'qrDataUri' => ''];
+            }
             $pagesHtml .= view('pdf/batch_page', [
                 'cells'       => $cells,
                 'isFirstPage' => $pageNumber === 1,

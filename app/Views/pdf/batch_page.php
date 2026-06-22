@@ -7,6 +7,9 @@
         <?php foreach (array_chunk($cells, 3) as $rowCells): ?>
             <div class="row">
                 <?php foreach ($rowCells as $cell): ?>
+                    <?php if (($cell["controlNumber"] ?? "") === ""): ?>
+                        <div class="cell"></div>
+                    <?php continue; endif; ?>
                     <div class="cell">
                         <div class="header">CITY OF BIÑAN</div>
                         <div class="field-row">
