@@ -8,7 +8,7 @@
             <div class="row">
                 <?php foreach ($rowCells as $cell): ?>
                     <?php if (($cell["controlNumber"] ?? "") === ""): ?>
-                        <div class="cell"></div>
+                        <div class="cell cell-empty"></div>
                     <?php continue; endif; ?>
                     <div class="cell">
                         <div class="header">CITY OF BIÑAN</div>

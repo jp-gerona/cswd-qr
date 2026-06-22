@@ -28,6 +28,9 @@
         text-align: center;
     }
 
+    /* Blank padding cells on the final page: no cut guide, no content. */
+    .cell-empty { border: none; }
+
     .cell .header {
         color: #6f42c1;
         font-weight: 700;
