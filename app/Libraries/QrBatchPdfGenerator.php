@@ -111,25 +111,38 @@ final class QrBatchPdfGenerator
         }
 
         $zipFilePath = tempnam(sys_get_temp_dir(), 'cswd-qr-zip');
-        $zipArchive  = new \ZipArchive();
-        $zipArchive->open($zipFilePath, \ZipArchive::OVERWRITE);
 
-        $remainingQuantity = $quantity;
-        $nextStartNumber   = 1;
-        for ($chunkIndex = 1; $chunkIndex <= $chunkCount; $chunkIndex++) {
-            $quantityInChunk = min($codesPerChunk, $remainingQuantity);
-            $chunkPdfBytes   = $this->renderChunkPdf($nextStartNumber, $quantityInChunk);
-            $entryName       = sprintf('batch-%03d.pdf', $chunkIndex);
-            $zipArchive->addFromString($entryName, $chunkPdfBytes);
+        try {
+            $zipArchive  = new \ZipArchive();
+            $openResult  = $zipArchive->open($zipFilePath, \ZipArchive::OVERWRITE);
+            if ($openResult !== true) {
+                throw new \RuntimeException('ZipArchive::open() failed with code: ' . $openResult);
+            }
 
-            $nextStartNumber   += $quantityInChunk;
-            $remainingQuantity -= $quantityInChunk;
-            unset($chunkPdfBytes); // release rendered chunk
+            $remainingQuantity = $quantity;
+            $nextStartNumber   = 1;
+            for ($chunkIndex = 1; $chunkIndex <= $chunkCount; $chunkIndex++) {
+                $quantityInChunk = min($codesPerChunk, $remainingQuantity);
+                $chunkPdfBytes   = $this->renderChunkPdf($nextStartNumber, $quantityInChunk);
+                $entryName       = sprintf('batch-%03d.pdf', $chunkIndex);
+                $zipArchive->addFromString($entryName, $chunkPdfBytes);
+
+                $nextStartNumber   += $quantityInChunk;
+                $remainingQuantity -= $quantityInChunk;
+                unset($chunkPdfBytes); // release rendered chunk
+            }
+            $zipArchive->close();
+
+            $zipBytes = file_get_contents($zipFilePath);
+            if ($zipBytes === false) {
+                throw new \RuntimeException('Failed to read assembled ZIP from temp file.');
+            }
+        } finally {
+            // Always remove the temp file, even if a chunk render threw mid-way.
+            if (is_file($zipFilePath)) {
+                unlink($zipFilePath);
+            }
         }
-        $zipArchive->close();
-
-        $zipBytes = file_get_contents($zipFilePath);
-        unlink($zipFilePath);
 
         return [
             'type'     => 'zip',
