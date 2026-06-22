@@ -9,6 +9,9 @@ final class QrBatchPlanner
     public const CONTROL_NUMBER_WIDTH = 6;
     public const MAX_QUANTITY        = 10000;
 
+    // Largest value representable in CONTROL_NUMBER_WIDTH digits (999999 for 6).
+    public const MAX_CONTROL_NUMBER  = 999999;
+
     public static function formatControlNumber(int $sequenceNumber): string
     {
         return str_pad((string) $sequenceNumber, self::CONTROL_NUMBER_WIDTH, '0', STR_PAD_LEFT);

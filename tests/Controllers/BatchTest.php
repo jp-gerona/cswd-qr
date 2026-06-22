@@ -9,21 +9,34 @@ final class BatchTest extends CIUnitTestCase
 {
     use FeatureTestTrait;
 
-    public function testRejectsMissingQuantity(): void
+    public function testRejectsMissingRange(): void
     {
         $result = $this->post('generate', []);
         $result->assertStatus(400);
     }
 
-    public function testRejectsQuantityAboveMax(): void
+    public function testRejectsControlNumberAboveSixDigits(): void
     {
-        $result = $this->post('generate', ['quantity' => 10001]);
+        $result = $this->post('generate', ['startNumber' => 1, 'endNumber' => 1000000]);
         $result->assertStatus(400);
     }
 
-    public function testValidQuantityReturnsPdfDownload(): void
+    public function testRejectsEndBeforeStart(): void
     {
-        $result = $this->post('generate', ['quantity' => 12]);
+        $result = $this->post('generate', ['startNumber' => 100, 'endNumber' => 50]);
+        $result->assertStatus(400);
+    }
+
+    public function testRejectsRangeAboveMax(): void
+    {
+        // 1..10001 => 10001 codes, over the 10,000 cap.
+        $result = $this->post('generate', ['startNumber' => 1, 'endNumber' => 10001]);
+        $result->assertStatus(400);
+    }
+
+    public function testValidRangeReturnsPdfDownload(): void
+    {
+        $result = $this->post('generate', ['startNumber' => 1, 'endNumber' => 12]);
         $result->assertStatus(200);
         $result->assertHeader('Content-Type', 'application/pdf');
     }

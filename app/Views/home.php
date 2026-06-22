@@ -15,12 +15,19 @@
                 <h1 class="h5 mb-3">CSWD QR Code Generator</h1>
                 <div id="generateError" class="alert alert-danger d-none" role="alert"></div>
                 <form id="generateForm">
-                    <div class="mb-3">
-                        <label for="quantity" class="form-label">Quantity</label>
-                        <input type="number" class="form-control" id="quantity" name="quantity"
-                               min="1" max="10000" value="12" required>
-                        <div class="form-text">Up to 10,000 QR codes. 12 QR codes per sheet.</div>
+                    <div class="row g-3 mb-2">
+                        <div class="col-6">
+                            <label for="startNumber" class="form-label">Starting control no.</label>
+                            <input type="number" class="form-control" id="startNumber" name="startNumber"
+                                   min="1" max="999999" value="1" required>
+                        </div>
+                        <div class="col-6">
+                            <label for="endNumber" class="form-label">Ending control no.</label>
+                            <input type="number" class="form-control" id="endNumber" name="endNumber"
+                                   min="1" max="999999" value="12" required>
+                        </div>
                     </div>
+                    <div class="form-text mb-3">Up to 10,000 QR codes per batch. 12 QR codes per sheet.</div>
                     <button type="submit" class="btn btn-primary" id="generateButton">Generate</button>
                 </form>
             </div>
@@ -39,7 +46,7 @@
             $.ajax({
                 url: '<?= site_url("generate") ?>',
                 method: 'POST',
-                data: { quantity: $('#quantity').val() },
+                data: { startNumber: $('#startNumber').val(), endNumber: $('#endNumber').val() },
                 xhrFields: { responseType: 'blob' }
             }).done(function (data, status, xhr) {
                 var disposition = xhr.getResponseHeader('Content-Disposition') || '';

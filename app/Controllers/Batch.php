@@ -9,8 +9,10 @@ class Batch extends BaseController
 {
     public function generate()
     {
-        $validationRules = [
-            'quantity' => 'required|is_natural_no_zero|less_than_equal_to[' . QrBatchPlanner::MAX_QUANTITY . ']',
+        $maxControlNumber = QrBatchPlanner::MAX_CONTROL_NUMBER;
+        $validationRules  = [
+            'startNumber' => "required|is_natural_no_zero|less_than_equal_to[{$maxControlNumber}]",
+            'endNumber'   => "required|is_natural_no_zero|less_than_equal_to[{$maxControlNumber}]",
         ];
 
         if (! $this->validate($validationRules)) {
@@ -19,8 +21,31 @@ class Batch extends BaseController
                 ->setJSON(['error' => implode(' ', $this->validator->getErrors())]);
         }
 
-        $quantity = (int) $this->request->getPost('quantity');
-        $result   = (new QrBatchPdfGenerator())->generate($quantity);
+        $startNumber = (int) $this->request->getPost('startNumber');
+        $endNumber   = (int) $this->request->getPost('endNumber');
+
+        if ($endNumber < $startNumber) {
+            return $this->response
+                ->setStatusCode(400)
+                ->setJSON(['error' => 'The ending control number must be greater than or equal to the starting control number.']);
+        }
+
+        $quantity = $endNumber - $startNumber + 1;
+        if ($quantity > QrBatchPlanner::MAX_QUANTITY) {
+            return $this->response
+                ->setStatusCode(400)
+                ->setJSON(['error' => 'The range covers ' . $quantity . ' codes, which exceeds the maximum of ' . QrBatchPlanner::MAX_QUANTITY . ' per batch.']);
+        }
+
+        try {
+            $result = (new QrBatchPdfGenerator())->generate($startNumber, $quantity);
+        } catch (\Throwable $generationError) {
+            log_message('error', 'QR batch generation failed: {message}', ['message' => $generationError->getMessage()]);
+
+            return $this->response
+                ->setStatusCode(500)
+                ->setJSON(['error' => 'Generation failed: ' . $generationError->getMessage()]);
+        }
 
         $contentType = $result['type'] === 'zip' ? 'application/zip' : 'application/pdf';
 
