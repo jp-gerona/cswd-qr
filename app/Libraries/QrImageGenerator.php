@@ -17,7 +17,9 @@ final class QrImageGenerator
         $this->pngOptions = new QROptions([
             'outputInterface' => QrPngOutput::class,
             'eccLevel'        => EccLevel::M,
-            'scale'           => 5,
+            // scale 4 (4px/module) keeps the code crisp at the 1.5in print size
+            // while producing a smaller PNG that dompdf embeds faster than scale 5.
+            'scale'           => 4,
             'outputBase64'    => true,
         ]);
 

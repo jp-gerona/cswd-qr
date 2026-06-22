@@ -94,8 +94,10 @@ final class QrPngOutput extends QROutputAbstract
     {
         $rawImageData = implode('', $allScanlines);
 
-        // zlib-compress the raw scanlines (the IDAT chunk payload).
-        $compressedImageData = gzcompress($rawImageData, 9);
+        // zlib-compress the raw scanlines (the IDAT chunk payload). Level 6 is
+        // the zlib default: near-max ratio for these tiny 1-bit images at a
+        // fraction of level 9's CPU cost — meaningful across thousands of codes.
+        $compressedImageData = gzcompress($rawImageData, 6);
 
         $pngSignature = "\x89PNG\r\n\x1a\n";
 
