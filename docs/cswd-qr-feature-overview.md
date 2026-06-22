@@ -2,40 +2,56 @@
 
 A web tool for the **City of Biñan** CSWD office that produces large sets of
 printable QR-code identification cards. Each card carries a unique six-digit
-control number encoded as the QR payload. Staff request a quantity (up to
-10,000) from a single browser form; the system renders the cards into a
-print-ready US-Letter PDF — or a ZIP of PDFs for large batches — and triggers
-an immediate download. No database write, no server-side storage of the
-generated file, no page reload.
+control number; the QR payload is the configured URL prefix prepended to that
+number (prefix `""` = the bare number). Staff enter a **start/end control-number
+range** in a browser form; the system renders the cards into a print-ready
+US-Letter PDF — or a ZIP of PDFs for large batches — and triggers an immediate
+download. No database write, no server-side storage of the generated file, no
+page reload.
 
-The QR content is a plain control number, so cards carry no personally
-identifiable information at print time; linking a card to a person happens
-downstream in a separate registry (see *Extension Points*).
+Batch size and every other tunable (QR URL prefix, filenames, grid, chunking,
+control-number width, max quantity) live in `app/Config/QrBatchSettings.php` and
+are `.env`-overridable. The default `maxQuantity` is **25,000**.
+
+With the default empty URL prefix the QR content is a plain control number, so
+cards carry no personally identifiable information at print time; linking a card
+to a person happens downstream in a separate registry (see *Extension Points*).
 
 ## End-to-End Flow
 
 1. **Browser form** — `/` is served by `App\Controllers\Home` (`app/Views/home.php`).
-   A single numeric input (1–10,000, default 12) with HTML `min`/`max` bounds.
-2. **AJAX submission** — jQuery intercepts submit and `POST`s `quantity` to
-   `/generate` with `responseType: 'blob'`. The response is binary (PDF or ZIP);
-   jQuery builds an object URL, clicks a synthetic anchor to save it, then
-   revokes the URL. On error it reads the JSON `{"error": ...}` and shows it.
-3. **Controller** — `App\Controllers\Batch::generate()` validates
-   `quantity` (`required|is_natural_no_zero|less_than_equal_to[10000]`),
-   returns `400` JSON on failure, and otherwise delegates to the library and
-   streams the bytes with the right `Content-Type`
-   (`application/pdf` / `application/zip`) and `Content-Disposition: attachment`.
+   Two numeric inputs — starting and ending control number — with HTML
+   `min`/`max` bounds. The helper text (max per batch, codes per sheet) is read
+   from `QrBatchSettings`.
+2. **AJAX submission** — jQuery intercepts submit and `POST`s `startNumber` /
+   `endNumber` to `/generate` with `responseType: 'blob'`. The response is binary
+   (PDF or ZIP); jQuery builds an object URL, clicks a synthetic anchor to save
+   it, then revokes the URL. On error the body is also a Blob, so it is read as
+   text first, then the JSON `{"error": ...}` is parsed and shown.
+3. **Controller** — `App\Controllers\Batch::generate()` validates `startNumber`
+   and `endNumber` (`required|is_natural_no_zero|less_than_equal_to[<maxControlNumber>]`),
+   rejects `end < start`, rejects ranges whose size exceeds `maxQuantity`,
+   returns `400` JSON on failure. On generation error it logs the detail and
+   returns a generic client-safe message (no internal details leaked). Otherwise
+   it delegates to the library and streams the bytes with the right
+   `Content-Type` (`application/pdf` / `application/zip`) and
+   `Content-Disposition: attachment`.
 4. **Generation** — `App\Libraries\QrBatchPdfGenerator::generate()` consults
    `QrBatchPlanner` for chunking. One chunk → a single PDF
-   (`cswd-qr-batch.pdf`). Multiple chunks → a ZIP (`cswd-qr-batch.zip`) with
-   entries `batch-001.pdf`, `batch-002.pdf`, …, assembled via PHP's
-   `ZipArchive` in a temp file that is always cleaned up in a `finally` block.
+   (`singlePdfFileName`, default `cswd-qr-batch.pdf`). Multiple chunks → a ZIP
+   (named from `zipFileNamePattern` with the batch's first/last control numbers)
+   with entries named from `chunkPdfNamePattern` (first/last control number per
+   chunk), assembled via PHP's `ZipArchive` in a temp file that is always cleaned
+   up in a `finally` block. Temp-file creation and chunk writes are checked for
+   failure.
 
 ## Control Numbers
 
 - Six digits, zero-padded, sequential from `1` (`000001`, `000002`, …).
 - `QrBatchPlanner::formatControlNumber()` / `controlNumbers()`.
-- Encoded as the **plain control-number string** in the QR — no URL, no metadata.
+- Width is config-driven (`controlNumberWidth`, default 6).
+- The QR payload is `qrUrlPrefix . controlNumber`; with the default empty prefix
+  this is the **plain control-number string** — no URL, no metadata.
 
 ## Print / Layout (per card)
 
@@ -58,13 +74,13 @@ append a trailing blank page.
 
 ## Library Choices
 
-- **dompdf/dompdf** — HTML/CSS → PDF; renders the grid and inline SVG without
-  native image extensions.
+- **dompdf/dompdf** — HTML/CSS → PDF; renders the 3×4 card grid.
 - **chillerlan/php-qrcode** (v6) — pure-PHP QR generation. QR codes are
-  embedded as **SVG** data URIs (`QRMarkupSVG`), not PNG: dompdf's PNG path
-  needs `ext-gd`, which the environment lacks. SVG is vector — sharp at any
-  print size — and needs no image extension. (A custom pure-PHP PNG encoder,
-  `QrPngOutput`, remains in the tree but is currently unused.)
+  embedded as **PNG** data URIs via the custom pure-PHP encoder `QrPngOutput`
+  (`QrImageGenerator::dataUri()`). dompdf's PNG embedding requires `ext-gd`, so
+  the renderer fails fast with a clear message when it is missing. An SVG output
+  mode (`QrImageGenerator::svgDataUri()`, `QRMarkupSVG`) remains available as an
+  ext-gd-free alternative but is not currently used.
 - **ZipArchive** (built-in) — multi-chunk packaging.
 
 A fresh `QRCode` instance is created per control number; reusing one instance
@@ -73,7 +89,8 @@ eventually overflow the QR's capacity.
 
 ## Scaling Notes
 
-- 12 cells/page, 50 pages/chunk (600 cards), 10,000 max.
+- 12 cells/page, 50 pages/chunk (600 cards); max batch = `maxQuantity` (default
+  25,000, `.env`-overridable). All four are config knobs in `QrBatchSettings`.
 - Per-chunk rendering with explicit memory release (`unset`) between chunks.
 - The renderer raises `memory_limit` to 512MB when lower (a 50-page chunk needs
   ~180MB in dompdf) and resets `set_time_limit(300)` per chunk, since the
@@ -82,14 +99,15 @@ eventually overflow the QR's capacity.
 ## Extension Points
 
 - **DB-backed records** — persist issued control numbers / link to beneficiaries.
-- **URL-encoded QR** — encode a scan URL instead of the bare number.
+- **URL-encoded QR** — already supported via `qrUrlPrefix`; set it to a scan URL
+  base to encode a full URL instead of the bare number.
 - **CSV upload** — drive names/barangays from an uploaded roster, pre-filling
   the currently blank fields.
 
 ## Environment Notes
 
-- Tests run under a PHP with `ext-intl` (CodeIgniter requirement),
-  `ext-zip`, `ext-gd`-independent SVG, and `ext-sqlite3` (for the framework's
-  example database tests). `composer test` covers the planner, QR generation,
+- Tests run under a PHP with `ext-intl` (CodeIgniter requirement), `ext-zip`,
+  `ext-gd` (PNG QR embedding), and `ext-sqlite3` (for the framework's example
+  database tests). `composer test` covers the planner, QR generation,
   PDF rendering, pagination (exactly 12/page), chunk orchestration, and the
   HTTP endpoint.

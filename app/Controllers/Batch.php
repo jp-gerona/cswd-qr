@@ -44,7 +44,7 @@ class Batch extends BaseController
 
             return $this->response
                 ->setStatusCode(500)
-                ->setJSON(['error' => 'Generation failed: ' . $generationError->getMessage()]);
+                ->setJSON(['error' => 'Generation failed. Please try again, or contact support if the problem persists.']);
         }
 
         $contentType = $result['type'] === 'zip' ? 'application/zip' : 'application/pdf';

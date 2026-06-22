@@ -40,8 +40,10 @@ final class QrImageGenerator
     }
 
     /**
-     * Returns an SVG data URI for the given content.
-     * Used by the PDF renderer, which requires no ext-gd (unlike PNG).
+     * Returns an SVG data URI for the given content. Optional alternative output
+     * mode: the PDF renderer currently embeds PNG via dataUri() (which needs
+     * ext-gd). SVG needs no image extension, so this is the fallback to switch to
+     * if an ext-gd-free deployment is ever required.
      */
     public function svgDataUri(string $content): string
     {

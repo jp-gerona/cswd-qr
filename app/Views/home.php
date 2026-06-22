@@ -27,7 +27,8 @@
                                    min="1" max="999999" value="12" required>
                         </div>
                     </div>
-                    <div class="form-text mb-3">Up to 10,000 QR codes per batch. 12 QR codes per sheet.</div>
+                    <?php $qrBatchSettings = config('QrBatchSettings'); ?>
+                    <div class="form-text mb-3">Up to <?= number_format($qrBatchSettings->maxQuantity) ?> QR codes per batch. <?= $qrBatchSettings->cellsPerPage ?> QR codes per sheet.</div>
                     <button type="submit" class="btn btn-primary" id="generateButton">Generate</button>
                 </form>
             </div>
@@ -61,9 +62,18 @@
                 link.remove();
                 window.URL.revokeObjectURL(url);
             }).fail(function (xhr) {
-                var message = 'Generation failed.';
-                try { message = JSON.parse(xhr.responseText).error || message; } catch (e) {}
-                $error.removeClass('d-none').text(message);
+                // With responseType 'blob' the error body is a Blob, so
+                // xhr.responseText is empty — read the Blob as text, then parse.
+                var showError = function (text) {
+                    var message = 'Generation failed.';
+                    try { message = JSON.parse(text).error || message; } catch (e) {}
+                    $error.removeClass('d-none').text(message);
+                };
+                if (xhr.response instanceof Blob) {
+                    xhr.response.text().then(showError, function () { showError(''); });
+                } else {
+                    showError(xhr.responseText || '');
+                }
             }).always(function () {
                 $button.prop('disabled', false).text('Generate');
             });

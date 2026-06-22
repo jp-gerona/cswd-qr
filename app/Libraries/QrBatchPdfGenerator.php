@@ -170,17 +170,24 @@ final class QrBatchPdfGenerator
         $nextStartNumber   = $startNumber;
         for ($chunkIndex = 1; $chunkIndex <= $chunkCount; $chunkIndex++) {
             $quantityInChunk = min($codesPerChunk, $remainingQuantity);
-            $chunks[]        = [
+            $chunkPath       = tempnam(sys_get_temp_dir(), 'cswd-qr-chunk');
+            if ($chunkPath === false) {
+                throw new \RuntimeException('Failed to create a temp file for a chunk PDF (no writable temp dir?).');
+            }
+            $chunks[] = [
                 'index'    => $chunkIndex,
                 'start'    => $nextStartNumber,
                 'quantity' => $quantityInChunk,
-                'path'     => tempnam(sys_get_temp_dir(), 'cswd-qr-chunk'),
+                'path'     => $chunkPath,
             ];
             $nextStartNumber   += $quantityInChunk;
             $remainingQuantity -= $quantityInChunk;
         }
 
         $zipFilePath = tempnam(sys_get_temp_dir(), 'cswd-qr-zip');
+        if ($zipFilePath === false) {
+            throw new \RuntimeException('Failed to create a temp file for the ZIP bundle (no writable temp dir?).');
+        }
 
         try {
             // Render the chunks (in parallel when the platform allows it) into
@@ -246,7 +253,10 @@ final class QrBatchPdfGenerator
         }
 
         foreach ($chunks as $chunk) {
-            file_put_contents($chunk['path'], $this->renderChunkPdf($chunk['start'], $chunk['quantity']));
+            $bytesWritten = file_put_contents($chunk['path'], $this->renderChunkPdf($chunk['start'], $chunk['quantity']));
+            if ($bytesWritten === false) {
+                throw new \RuntimeException('Failed to write chunk PDF ' . $chunk['index'] . ' to its temp file.');
+            }
         }
     }
 
