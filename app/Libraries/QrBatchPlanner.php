@@ -2,19 +2,40 @@
 
 namespace App\Libraries;
 
+use Config\QrBatchSettings;
+
 final class QrBatchPlanner
 {
-    public const CELLS_PER_PAGE      = 12;
-    public const PAGES_PER_CHUNK     = 50;
-    public const CONTROL_NUMBER_WIDTH = 6;
-    public const MAX_QUANTITY        = 10000;
+    private static function settings(): QrBatchSettings
+    {
+        return config('QrBatchSettings');
+    }
 
-    // Largest value representable in CONTROL_NUMBER_WIDTH digits (999999 for 6).
-    public const MAX_CONTROL_NUMBER  = 999999;
+    public static function cellsPerPage(): int
+    {
+        return self::settings()->cellsPerPage;
+    }
+
+    public static function pagesPerChunk(): int
+    {
+        return self::settings()->pagesPerChunk;
+    }
+
+    public static function maxQuantity(): int
+    {
+        return self::settings()->maxQuantity;
+    }
+
+    // Largest value representable in the configured control-number width
+    // (999999 for width 6).
+    public static function maxControlNumber(): int
+    {
+        return (10 ** self::settings()->controlNumberWidth) - 1;
+    }
 
     public static function formatControlNumber(int $sequenceNumber): string
     {
-        return str_pad((string) $sequenceNumber, self::CONTROL_NUMBER_WIDTH, '0', STR_PAD_LEFT);
+        return str_pad((string) $sequenceNumber, self::settings()->controlNumberWidth, '0', STR_PAD_LEFT);
     }
 
     public static function controlNumbers(int $quantity, int $startNumber = 1): array
@@ -29,11 +50,11 @@ final class QrBatchPlanner
 
     public static function pageCount(int $quantity): int
     {
-        return (int) ceil($quantity / self::CELLS_PER_PAGE);
+        return (int) ceil($quantity / self::cellsPerPage());
     }
 
     public static function chunkCount(int $quantity): int
     {
-        return (int) ceil(self::pageCount($quantity) / self::PAGES_PER_CHUNK);
+        return (int) ceil(self::pageCount($quantity) / self::pagesPerChunk());
     }
 }

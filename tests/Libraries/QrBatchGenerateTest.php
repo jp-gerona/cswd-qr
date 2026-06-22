@@ -22,7 +22,8 @@ final class QrBatchGenerateTest extends CIUnitTestCase
         $result = (new QrBatchPdfGenerator())->generate(1, 601);
 
         $this->assertSame('zip', $result['type']);
-        $this->assertSame('cswd-qr-batch.zip', $result['filename']);
+        // Filename carries the padded first/last control numbers (1..601).
+        $this->assertSame('cswd-qr-batch-000001-000601.zip', $result['filename']);
         // ZIP local file header magic.
         $this->assertSame("PK\x03\x04", substr($result['bytes'], 0, 4));
     }

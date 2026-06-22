@@ -35,24 +35,28 @@ final class QrBatchPdfGenerator
             );
         }
 
+        $settings         = config('QrBatchSettings');
         $qrImageGenerator = new QrImageGenerator();
         $controlNumbers   = QrBatchPlanner::controlNumbers($quantityInChunk, $startNumber);
 
         $pagesHtml  = '';
         $pageNumber = 0;
-        foreach (array_chunk($controlNumbers, QrBatchPlanner::CELLS_PER_PAGE) as $pageControlNumbers) {
+        foreach (array_chunk($controlNumbers, QrBatchPlanner::cellsPerPage()) as $pageControlNumbers) {
             $pageNumber++;
             $cells = [];
             foreach ($pageControlNumbers as $controlNumber) {
                 $cells[] = [
+                    // The card shows the bare control number; the QR payload is
+                    // the configured URL prefix prepended to it (prefix "" =
+                    // bare number).
                     'controlNumber' => $controlNumber,
-                    'qrDataUri'     => $qrImageGenerator->dataUri($controlNumber),
+                    'qrDataUri'     => $qrImageGenerator->dataUri($settings->qrUrlPrefix . $controlNumber),
                 ];
             }
             // Pad the final page with blank cells so every page is a full 3x4
             // grid — otherwise a short last row stretches its columns/height and
             // the cards lose their consistent size.
-            while (count($cells) < QrBatchPlanner::CELLS_PER_PAGE) {
+            while (count($cells) < QrBatchPlanner::cellsPerPage()) {
                 $cells[] = ['controlNumber' => '', 'qrDataUri' => ''];
             }
             $pagesHtml .= view('pdf/batch_page', [
@@ -138,14 +142,15 @@ final class QrBatchPdfGenerator
      */
     public function generate(int $startNumber, int $quantity): array
     {
-        $codesPerChunk = QrBatchPlanner::PAGES_PER_CHUNK * QrBatchPlanner::CELLS_PER_PAGE;
+        $settings      = config('QrBatchSettings');
+        $codesPerChunk = QrBatchPlanner::pagesPerChunk() * QrBatchPlanner::cellsPerPage();
         $chunkCount    = QrBatchPlanner::chunkCount($quantity);
 
         if ($chunkCount === 1) {
             return [
                 'type'     => 'pdf',
                 'bytes'    => $this->renderChunkPdf($startNumber, $quantity),
-                'filename' => 'cswd-qr-batch.pdf',
+                'filename' => $settings->singlePdfFileName,
             ];
         }
 
@@ -188,7 +193,12 @@ final class QrBatchPdfGenerator
                 throw new \RuntimeException('ZipArchive::open() failed with code: ' . $openResult);
             }
             foreach ($chunks as $chunk) {
-                $zipArchive->addFile($chunk['path'], sprintf('batch-%03d.pdf', $chunk['index']));
+                $chunkLastNumber = $chunk['start'] + $chunk['quantity'] - 1;
+                $zipArchive->addFile($chunk['path'], sprintf(
+                    $settings->chunkPdfNamePattern,
+                    QrBatchPlanner::formatControlNumber($chunk['start']),
+                    QrBatchPlanner::formatControlNumber($chunkLastNumber)
+                ));
             }
             $zipArchive->close();
 
@@ -211,7 +221,11 @@ final class QrBatchPdfGenerator
         return [
             'type'     => 'zip',
             'bytes'    => $zipBytes,
-            'filename' => 'cswd-qr-batch.zip',
+            'filename' => sprintf(
+                $settings->zipFileNamePattern,
+                QrBatchPlanner::formatControlNumber($startNumber),
+                QrBatchPlanner::formatControlNumber($startNumber + $quantity - 1)
+            ),
         ];
     }
 

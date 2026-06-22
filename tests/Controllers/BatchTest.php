@@ -29,8 +29,9 @@ final class BatchTest extends CIUnitTestCase
 
     public function testRejectsRangeAboveMax(): void
     {
-        // 1..10001 => 10001 codes, over the 10,000 cap.
-        $result = $this->post('generate', ['startNumber' => 1, 'endNumber' => 10001]);
+        // One past the configured maxQuantity cap.
+        $endNumber = config('QrBatchSettings')->maxQuantity + 1;
+        $result    = $this->post('generate', ['startNumber' => 1, 'endNumber' => $endNumber]);
         $result->assertStatus(400);
     }
 

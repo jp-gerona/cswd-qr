@@ -9,7 +9,7 @@ class Batch extends BaseController
 {
     public function generate()
     {
-        $maxControlNumber = QrBatchPlanner::MAX_CONTROL_NUMBER;
+        $maxControlNumber = QrBatchPlanner::maxControlNumber();
         $validationRules  = [
             'startNumber' => "required|is_natural_no_zero|less_than_equal_to[{$maxControlNumber}]",
             'endNumber'   => "required|is_natural_no_zero|less_than_equal_to[{$maxControlNumber}]",
@@ -31,10 +31,10 @@ class Batch extends BaseController
         }
 
         $quantity = $endNumber - $startNumber + 1;
-        if ($quantity > QrBatchPlanner::MAX_QUANTITY) {
+        if ($quantity > QrBatchPlanner::maxQuantity()) {
             return $this->response
                 ->setStatusCode(400)
-                ->setJSON(['error' => 'The range covers ' . $quantity . ' codes, which exceeds the maximum of ' . QrBatchPlanner::MAX_QUANTITY . ' per batch.']);
+                ->setJSON(['error' => 'The range covers ' . $quantity . ' codes, which exceeds the maximum of ' . QrBatchPlanner::maxQuantity() . ' per batch.']);
         }
 
         try {
