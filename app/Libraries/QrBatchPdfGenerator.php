@@ -51,7 +51,7 @@ final class QrBatchPdfGenerator
         );
         $fontMetrics->registerFont(
             ['family' => 'Roboto', 'style' => 'normal', 'weight' => 'bold'],
-            APPPATH . 'Fonts/Roboto-Bold.ttf'
+            APPPATH . 'Fonts/Roboto-Regular.ttf'
         );
     }
 
