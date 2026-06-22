@@ -9,30 +9,32 @@ use chillerlan\QRCode\Output\QRMarkupSVG;
 
 final class QrImageGenerator
 {
-    private QRCode $qrCodeInstance;
-    private QRCode $svgQrCodeInstance;
+    private QROptions $pngOptions;
+    private QROptions $svgOptions;
 
     public function __construct()
     {
-        $this->qrCodeInstance = new QRCode(new QROptions([
+        $this->pngOptions = new QROptions([
             'outputInterface' => QrPngOutput::class,
             'eccLevel'        => EccLevel::M,
             'scale'           => 5,
             'outputBase64'    => true,
-        ]));
+        ]);
 
-        $this->svgQrCodeInstance = new QRCode(new QROptions([
+        $this->svgOptions = new QROptions([
             'outputInterface'  => QRMarkupSVG::class,
             'eccLevel'         => EccLevel::M,
             'outputBase64'     => true,
             'svgAddXmlHeader'  => false,
-        ]));
+        ]);
     }
 
     public function dataUri(string $content): string
     {
+        // A fresh QRCode per call: a reused instance accumulates data segments
+        // across render() calls and eventually exceeds QR capacity.
         // chillerlan v6 returns a full data URI when outputBase64 is true.
-        return $this->qrCodeInstance->render($content);
+        return (new QRCode($this->pngOptions))->render($content);
     }
 
     /**
@@ -41,6 +43,7 @@ final class QrImageGenerator
      */
     public function svgDataUri(string $content): string
     {
-        return $this->svgQrCodeInstance->render($content);
+        // Fresh QRCode per call — see dataUri() for why reuse is unsafe.
+        return (new QRCode($this->svgOptions))->render($content);
     }
 }

@@ -7,8 +7,17 @@ use Dompdf\Options;
 
 final class QrBatchPdfGenerator
 {
+    /**
+     * A full 50-page chunk with embedded SVG QR codes needs roughly 180 MB to
+     * render in dompdf — more than the 128 MB a default web request is given.
+     * Raise the limit only when it is currently lower so we never shrink it.
+     */
+    private const RENDER_MEMORY_LIMIT_BYTES = 512 * 1024 * 1024;
+
     public function renderChunkPdf(int $startNumber, int $quantityInChunk): string
     {
+        $this->ensureRenderMemoryLimit();
+
         $qrImageGenerator = new QrImageGenerator();
         $controlNumbers   = QrBatchPlanner::controlNumbers($quantityInChunk, $startNumber);
 
@@ -40,6 +49,33 @@ final class QrBatchPdfGenerator
         $dompdf->render();
 
         return $dompdf->output();
+    }
+
+    private function ensureRenderMemoryLimit(): void
+    {
+        $currentMemoryLimit = trim((string) ini_get('memory_limit'));
+
+        // An unlimited limit ("-1") already has all the headroom we need.
+        if ($currentMemoryLimit === '-1') {
+            return;
+        }
+
+        if ($this->parseMemoryLimitToBytes($currentMemoryLimit) < self::RENDER_MEMORY_LIMIT_BYTES) {
+            ini_set('memory_limit', (string) self::RENDER_MEMORY_LIMIT_BYTES);
+        }
+    }
+
+    private function parseMemoryLimitToBytes(string $memoryLimit): int
+    {
+        $numericValue = (int) $memoryLimit;
+        $unitSuffix   = strtolower(substr($memoryLimit, -1));
+
+        return match ($unitSuffix) {
+            'g'     => $numericValue * 1024 * 1024 * 1024,
+            'm'     => $numericValue * 1024 * 1024,
+            'k'     => $numericValue * 1024,
+            default => $numericValue,
+        };
     }
 
     private function registerRobotoFont(Dompdf $dompdf): void
