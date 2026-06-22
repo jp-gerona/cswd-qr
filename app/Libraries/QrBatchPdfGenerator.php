@@ -63,7 +63,42 @@ final class QrBatchPdfGenerator
      */
     public function generate(int $quantity): array
     {
-        // TODO: implemented in Task 6
-        throw new \RuntimeException('generate() not yet implemented — see Task 6.');
+        $codesPerChunk = QrBatchPlanner::PAGES_PER_CHUNK * QrBatchPlanner::CELLS_PER_PAGE;
+        $chunkCount    = QrBatchPlanner::chunkCount($quantity);
+
+        if ($chunkCount === 1) {
+            return [
+                'type'     => 'pdf',
+                'bytes'    => $this->renderChunkPdf(1, $quantity),
+                'filename' => 'cswd-qr-batch.pdf',
+            ];
+        }
+
+        $zipFilePath = tempnam(sys_get_temp_dir(), 'cswd-qr-zip');
+        $zipArchive  = new \ZipArchive();
+        $zipArchive->open($zipFilePath, \ZipArchive::OVERWRITE);
+
+        $remainingQuantity = $quantity;
+        $nextStartNumber   = 1;
+        for ($chunkIndex = 1; $chunkIndex <= $chunkCount; $chunkIndex++) {
+            $quantityInChunk = min($codesPerChunk, $remainingQuantity);
+            $chunkPdfBytes   = $this->renderChunkPdf($nextStartNumber, $quantityInChunk);
+            $entryName       = sprintf('batch-%03d.pdf', $chunkIndex);
+            $zipArchive->addFromString($entryName, $chunkPdfBytes);
+
+            $nextStartNumber   += $quantityInChunk;
+            $remainingQuantity -= $quantityInChunk;
+            unset($chunkPdfBytes); // release rendered chunk
+        }
+        $zipArchive->close();
+
+        $zipBytes = file_get_contents($zipFilePath);
+        unlink($zipFilePath);
+
+        return [
+            'type'     => 'zip',
+            'bytes'    => $zipBytes,
+            'filename' => 'cswd-qr-batch.zip',
+        ];
     }
 }
