@@ -112,7 +112,7 @@ value outside the range 1–10,000 before it even reaches the server.
 <h3>2.2 AJAX Submission</h3>
 <p>
 Rather than a standard HTML form post, jQuery intercepts the submit event and sends the quantity to
-<code>POST /batch/generate</code> as an XMLHttpRequest with <code>responseType</code> set to
+<code>POST /generate</code> as an XMLHttpRequest with <code>responseType</code> set to
 <code>'blob'</code>. This means the browser treats the response body as raw binary data, which is
 necessary because the server returns either a PDF or a ZIP file directly — there is no intermediate
 JSON envelope. When the response arrives, jQuery synthesises a temporary anchor element, sets its

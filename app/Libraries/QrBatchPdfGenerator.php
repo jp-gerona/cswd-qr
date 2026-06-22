@@ -88,6 +88,12 @@ final class QrBatchPdfGenerator
 
     private function registerRobotoFont(Dompdf $dompdf): void
     {
+        // The source TTF lives in app/Fonts/; dompdf parses it once and writes
+        // its .ufm metrics cache into WRITEPATH/fonts (set as fontDir/fontCache
+        // above). Two different directories on purpose — don't conflate them.
+        // Bold is registered to the upright Regular face deliberately: the
+        // variable-font weight axis is ignored by php-font-lib, and the only
+        // available "Bold" file was the italic face (wrong style).
         $fontMetrics = $dompdf->getFontMetrics();
         $fontMetrics->registerFont(
             ['family' => 'Roboto', 'style' => 'normal', 'weight' => 'normal'],
