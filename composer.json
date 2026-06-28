@@ -13,6 +13,8 @@
         "php": "^8.2",
         "chillerlan/php-qrcode": "^6.0",
         "codeigniter4/framework": "^4.7",
+        "twbs/bootstrap": "^5.3",
+        "components/jquery": "^3.6",
         "dompdf/dompdf": "^3.1"
     },
     "require-dev": {
